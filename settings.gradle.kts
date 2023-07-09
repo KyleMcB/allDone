@@ -4,6 +4,7 @@ include(":androidApp")
 include(":shared")
 include(":desktopApp")
 include(":entities")
+include(":entities-test")
 
 pluginManagement {
     repositories {
