@@ -1,8 +1,9 @@
-rootProject.name = "MyApplication"
+rootProject.name = "allDone"
 
 include(":androidApp")
 include(":shared")
 include(":desktopApp")
+include(":entities")
 
 pluginManagement {
     repositories {
@@ -19,6 +20,7 @@ pluginManagement {
         kotlin("jvm").version(kotlinVersion)
         kotlin("multiplatform").version(kotlinVersion)
         kotlin("android").version(kotlinVersion)
+        kotlin("plugin.serialization") version kotlinVersion
 
         id("com.android.application").version(agpVersion)
         id("com.android.library").version(agpVersion)
