@@ -6,13 +6,12 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
 
-class TaskTest {
+class UserTest {
     @Test
-    fun serializableProperty() = runTest {
-        forAll(taskArb) { task ->
-            val string: String = Json.encodeToString(task)
-            task == Json.decodeFromString<Task>(string)
+    fun userIsSerializable() = runTest {
+        forAll(userArb) { user ->
+            val string: String = Json.encodeToString(user)
+            user == Json.decodeFromString<User>(string)
         }
     }
-
 }
