@@ -5,6 +5,7 @@ include(":shared")
 include(":desktopApp")
 include(":entities")
 include(":entities-test")
+include(":task-server")
 
 pluginManagement {
     repositories {
@@ -17,6 +18,7 @@ pluginManagement {
         val kotlinVersion = extra["kotlin.version"] as String
         val agpVersion = extra["agp.version"] as String
         val composeVersion = extra["compose.version"] as String
+        val ktorVersion = extra["ktor_version"] as String
 
         kotlin("jvm").version(kotlinVersion)
         kotlin("multiplatform").version(kotlinVersion)
@@ -27,6 +29,7 @@ pluginManagement {
         id("com.android.library").version(agpVersion)
 
         id("org.jetbrains.compose").version(composeVersion)
+        id("io.ktor.plugin").version(ktorVersion)
     }
 }
 

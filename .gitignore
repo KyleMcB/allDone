@@ -13,3 +13,6 @@ iosApp/iosApp.xcworkspace/*
 iosApp/iosApp.xcodeproj/*
 !iosApp/iosApp.xcodeproj/project.pbxproj
 shared/shared.podspec
+/entities-test/entities.podspec
+/entities/entities.podspec
+/entities-test/entities_test.podspec
