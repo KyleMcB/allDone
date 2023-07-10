@@ -1,19 +1,25 @@
 import com.example.logic.ClientConnection
 import com.xingpeds.alldone.entities.*
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 
-class TestClientConnection private constructor(scope: CoroutineScope) : ClientConnection {
+class TestClientConnection private constructor(
+    scope: CoroutineScope, messages: Flow<ClientMessage>
+) : ClientConnection {
     private val _outbound = MutableStateFlow<List<ServerMessage>>(emptyList())
     val outbound = _outbound.asStateFlow()
+    override val inbound: Flow<ClientMessage> = messages
+
     override suspend fun send(message: ServerMessage) {
-        _outbound.update { it + message }
         println("$this get $message")
+        _outbound.update { it + message }
     }
 
     init {
@@ -25,6 +31,7 @@ class TestClientConnection private constructor(scope: CoroutineScope) : ClientCo
 
     companion object {
 
-        fun TestScope.getTestClient() = TestClientConnection(this.backgroundScope)
+        fun TestScope.getTestClient(messages: Flow<ClientMessage> = flowOf()) =
+            TestClientConnection(this.backgroundScope, messages)
     }
 }

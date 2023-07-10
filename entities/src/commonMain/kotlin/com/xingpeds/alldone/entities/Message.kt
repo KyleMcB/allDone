@@ -6,6 +6,11 @@ import kotlinx.serialization.Serializable
 sealed interface ClientMessage
 
 @Serializable
+sealed interface IdentifiedClientMessage : ClientMessage {
+    val user: User
+}
+
+@Serializable
 sealed interface IdentifiedRequest : ClientMessage
 
 @Serializable

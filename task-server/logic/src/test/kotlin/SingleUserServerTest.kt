@@ -1,8 +1,13 @@
 import TestClientConnection.Companion.getTestClient
 import com.example.logic.Persistence
 import com.example.logic.SingleUserServer
+import com.xingpeds.alldone.entities.*
 import com.xingpeds.alldone.entities.test.*
 import io.kotest.property.arbitrary.next
+import kotlinx.coroutines.flow.filterNot
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -62,6 +67,17 @@ class SingleUserServerTest {
         assertEquals(message, connection2.outbound.value.single())
         assertEquals(1, connection1.outbound.value.size)
         assertEquals(1, connection2.outbound.value.size)
+    }
+
+    @Test
+    fun `user can get tasks`() = runTest {
+        val subject = getTestSubject()
+        val connection = getTestClient(flowOf(AllTasks))
+        subject.addConnection(connection)
+        advanceUntilIdle()
+        val response =
+            connection.outbound.filterNot { it.isEmpty() }.first().first() as AllTasksResponse
+        assertEquals(emptyList(), response.tasks)
     }
 
 }
