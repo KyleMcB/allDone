@@ -8,13 +8,12 @@ data class Task(
     val name: String,
     val id: UUID,
     val type: RepeatType,
-    val repeatInterval: Int,
-    val notificationType: NotificationType,
-    val due: Instant
+    val notificationType: NotificationType? = null,
+    val due: Instant? = null,
 )
 
 @Serializable
-enum class RepeatType {
+enum class RepeatType(val interval: Int = 1) {
     Single,
     Daily,
     Weekly,
