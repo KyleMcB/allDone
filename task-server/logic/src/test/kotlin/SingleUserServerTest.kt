@@ -135,6 +135,25 @@ class SingleUserServerTest {
                 .first() as CreateCompletionResponse
     }
 
+    @Test
+    fun `user can get a completion dump for a task`() = runTest {
+        val task = taskArb.next()
+        val completion = completionArbFactory(task.id).next()
+        val data = MemoryNonPersistence(
+            taskMap =
+            mutableMapOf(
+                subjectUser to listOf(task),
+            ),
+            completionMap = mutableMapOf(
+                task.id to listOf(completion)
+            )
+        )
+        val subject = getTestSubject(data)
+        val connection = getTestClient(flowOf(AllCompletionsForTask(task.id)))
+        subject.addConnection(connection)
+        connection.outbound.filterNot { it.isEmpty() }.first()
+            .first() as AllCompletionsForTaskResponse
+    }
 }
 
 fun Task.asData() = TaskData(

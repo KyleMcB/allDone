@@ -8,6 +8,7 @@ interface Persistence {
     suspend fun addTask(user: User, taskData: TaskData): Task
     fun taskEvents(): Flow<TaskEvent>
     suspend fun addCompletion(task: Task, completionData: CompletionData)
+    suspend fun getAllCompletions(taskId: UUID): List<Completion>
 
 }
 

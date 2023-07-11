@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 
 class MemoryNonPersistence(
     private val taskMap: MutableMap<User, List<Task>> = mutableMapOf(),
-    private val completionMap: MutableMap<UUID, List<Completion>> = mutableMapOf()
+    private val completionMap: MutableMap<UUID, List<Completion>> = mutableMapOf(),
 ) :
     Persistence {
     val events = MutableSharedFlow<TaskEvent>()
@@ -29,6 +29,10 @@ class MemoryNonPersistence(
         val comp = Completion(task.id, randUuid(), completionData.timeStamp)
         completionMap[task.id] = (completionMap[task.id] ?: emptyList()) + comp
         events.emit(TaskEvent.CompletionAdded(comp))
+    }
+
+    override suspend fun getAllCompletions(taskId: UUID): List<Completion> {
+        return completionMap[taskId] ?: emptyList()
     }
 }
 

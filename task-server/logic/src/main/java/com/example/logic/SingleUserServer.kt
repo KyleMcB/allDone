@@ -21,7 +21,7 @@ import kotlin.coroutines.CoroutineContext
 class SingleUserServer(
     val user: User,
     private val data: Persistence,
-    private val context: CoroutineContext = Dispatchers.Default
+    private val context: CoroutineContext = Dispatchers.Default,
 ) {
     private val mRequestsFromUser: MutableSharedFlow<ClientMessage> =
         MutableSharedFlow(extraBufferCapacity = 10)
@@ -44,13 +44,21 @@ class SingleUserServer(
 
     private suspend fun handleRequest(
         message: AuthenticatedClientMessage,
-        connection: ClientConnection
+        connection: ClientConnection,
     ) {
         println("handleRequest: $message")
         when (message) {
             AllTasks -> connection.send(AllTasksResponse(data.getAllTasks(user)))
             is AddTask -> data.addTask(user, message.taskData)
             is CreateCompletion -> data.addCompletion(message.task, message.completionData)
+            is AllCompletionsForTask -> connection.send(
+                AllCompletionsForTaskResponse(
+                    taskId = message.taskId,
+                    completions = data.getAllCompletions(
+                        message.taskId
+                    )
+                )
+            )
         }
     }
 

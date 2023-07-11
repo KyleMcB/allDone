@@ -14,3 +14,6 @@ data class AddTask(val taskData: TaskData) : AuthenticatedClientMessage
 @Serializable
 data class CreateCompletion(val task: Task, val completionData: CompletionData) :
     AuthenticatedClientMessage
+
+@Serializable
+data class AllCompletionsForTask(val taskId: UUID) : AuthenticatedClientMessage

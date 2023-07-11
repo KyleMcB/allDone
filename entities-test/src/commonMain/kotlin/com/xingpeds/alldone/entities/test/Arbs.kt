@@ -36,3 +36,19 @@ val userArb = arbitrary {
         id = uuidArb.bind()
     )
 }
+
+fun completionArbFactory(taskId: UUID) = arbitrary {
+    Completion(
+        taskId = taskId,
+        id = uuidArb.bind(),
+        timeStamp = instantArb.bind()
+    )
+}
+
+val completionArb = arbitrary {
+    Completion(
+        taskId = uuidArb.bind(),
+        id = uuidArb.bind(),
+        timeStamp = instantArb.bind()
+    )
+}

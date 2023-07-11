@@ -13,3 +13,7 @@ data class AddTaskResponse(val task: Task) : ServerMessage
 
 @Serializable
 data class CreateCompletionResponse(val completion: Completion) : ServerMessage
+
+@Serializable
+data class AllCompletionsForTaskResponse(val taskId: UUID, val completions: List<Completion>) :
+    ServerMessage
