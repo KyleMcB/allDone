@@ -1,27 +1,29 @@
 import TestClientConnection.Companion.getTestClient
+import com.example.logic.MemoryNonPersistence
 import com.example.logic.Persistence
 import com.example.logic.SingleUserServer
 import com.xingpeds.alldone.entities.*
 import com.xingpeds.alldone.entities.test.*
+import io.kotest.property.Arb
+import io.kotest.property.arbitrary.list
 import io.kotest.property.arbitrary.next
+import io.kotest.property.forAll
 import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import kotlin.test.assertEquals
 
 class SingleUserServerTest {
     val subjectUser = userArb.next()
-    val data = object : Persistence {
 
-    }
 
-    fun getTestSubject(): SingleUserServer = SingleUserServer(
-        user = subjectUser,
-        data = data
-    )
+    fun getTestSubject(data: Persistence = MemoryNonPersistence()): SingleUserServer =
+        SingleUserServer(
+            user = subjectUser,
+            data = data
+        )
 
     @Test
     fun `addConnection should add a connection to the connections`() = runTest {
@@ -70,14 +72,74 @@ class SingleUserServerTest {
     }
 
     @Test
-    fun `user can get tasks`() = runTest {
+    fun `user can get tasks (empty)`() = runTest {
         val subject = getTestSubject()
         val connection = getTestClient(flowOf(AllTasks))
         subject.addConnection(connection)
-        advanceUntilIdle()
         val response =
             connection.outbound.filterNot { it.isEmpty() }.first().first() as AllTasksResponse
         assertEquals(emptyList(), response.tasks)
     }
 
+    @Test
+    fun `user can get tasks (populated)`() = runTest {
+        val task = taskArb.next()
+        val data = MemoryNonPersistence(mutableMapOf(subjectUser to listOf(task)))
+        val subject = getTestSubject(data)
+        val connection = getTestClient(flowOf(AllTasks))
+        subject.addConnection(connection)
+        val response =
+            connection.outbound.filterNot { it.isEmpty() }.first().first() as AllTasksResponse
+        assertEquals(listOf(task), response.tasks)
+    }
+
+    @Test
+    fun `property test, all saved tasks will be sent with AllTasks`() = runTest {
+        forAll(Arb.list(taskArb)) { taskList ->
+            val data = MemoryNonPersistence(mutableMapOf(subjectUser to taskList))
+            val subject = getTestSubject(data)
+            val connection = getTestClient(flowOf(AllTasks))
+            subject.addConnection(connection)
+            val response = connection.outbound.filterNot { it.isEmpty() }
+                .first().first() as AllTasksResponse
+            response.tasks == taskList
+        }
+    }
+
+    @Test
+    fun `user can add a task`() = runTest {
+        val task = taskArb.next()
+        val subject = getTestSubject()
+        val connection = getTestClient(flowOf(AddTask(task.asData())))
+        subject.addConnection(connection)
+        val response =
+            connection.outbound.filterNot { it.isEmpty() }.first().first() as AddTaskResponse
+    }
+
+    @Test
+    fun `user can create a completion`() = runTest {
+        val task = taskArb.next()
+        val subject = getTestSubject()
+        val connection =
+            getTestClient(
+                flowOf(
+                    CreateCompletion(
+                        task,
+                        CompletionData(task.id, instantArb.next())
+                    )
+                )
+            )
+        subject.addConnection(connection)
+        val response =
+            connection.outbound.filterNot { it.isEmpty() }.first()
+                .first() as CreateCompletionResponse
+    }
+
 }
+
+fun Task.asData() = TaskData(
+    name = name,
+    type = type,
+    notificationType = notificationType,
+    due = due
+)

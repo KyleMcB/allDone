@@ -31,13 +31,26 @@ class SingleUserServer(
         MutableStateFlow(emptySet())
     val connections: StateFlow<Set<ClientConnection>> = _connections
 
+    init {
+        scope.launch {
+            data.taskEvents().collect { event ->
+                when (event) {
+                    is TaskEvent.TaskAdded -> broadcast(AddTaskResponse(event.task))
+                    is TaskEvent.CompletionAdded -> broadcast((CreateCompletionResponse(event.completion)))
+                }
+            }
+        }
+    }
+
     private suspend fun handleRequest(
         message: AuthenticatedClientMessage,
         connection: ClientConnection
     ) {
         println("handleRequest: $message")
         when (message) {
-            AllTasks -> connection.send(AllTasksResponse(emptyList()))
+            AllTasks -> connection.send(AllTasksResponse(data.getAllTasks(user)))
+            is AddTask -> data.addTask(user, message.taskData)
+            is CreateCompletion -> data.addCompletion(message.task, message.completionData)
         }
     }
 

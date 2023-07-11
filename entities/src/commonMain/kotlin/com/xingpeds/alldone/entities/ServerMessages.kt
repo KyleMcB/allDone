@@ -7,3 +7,9 @@ data class AllTasksResponse(val tasks: List<Task>) : ServerMessage
 
 @Serializable
 object InvalidRequest : ServerMessage
+
+@Serializable
+data class AddTaskResponse(val task: Task) : ServerMessage
+
+@Serializable
+data class CreateCompletionResponse(val completion: Completion) : ServerMessage
