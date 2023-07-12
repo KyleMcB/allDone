@@ -46,7 +46,7 @@ class LoginTest {
     }
 
     @Test
-    fun `user logs in`() = runTest {
+    fun `connection requests new user`() = runTest {
         val connection = getTestClient(
             flowOf(
                 NewUserRequest(UserData("test")),
