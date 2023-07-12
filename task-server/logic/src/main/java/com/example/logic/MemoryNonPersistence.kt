@@ -21,7 +21,7 @@ class MemoryNonPersistence(
         return task
     }
 
-    override fun taskEvents(): Flow<TaskEvent> {
+    override fun taskEvents(user: User): Flow<TaskEvent> {
         return events
     }
 
@@ -34,6 +34,14 @@ class MemoryNonPersistence(
     override suspend fun getAllCompletions(taskId: UUID): List<Completion> {
         return completionMap[taskId] ?: emptyList()
     }
+
+    override suspend fun addUser(userData: UserData): User? {
+        val userId = randUuid()
+        val user = createUser(userId, userData)
+        taskMap[user] = emptyList()
+        return user
+    }
 }
 
+fun createUser(id: UUID, data: UserData) = User(data.name, id)
 fun TaskData.taskFromData(id: UUID) = Task(name, id, type, notificationType, due)

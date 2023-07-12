@@ -17,3 +17,6 @@ data class CreateCompletionResponse(val completion: Completion) : ServerMessage
 @Serializable
 data class AllCompletionsForTaskResponse(val taskId: UUID, val completions: List<Completion>) :
     ServerMessage
+
+@Serializable
+object IdentifyFirst : ServerMessage

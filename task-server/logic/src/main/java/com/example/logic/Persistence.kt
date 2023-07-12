@@ -6,9 +6,10 @@ import kotlinx.coroutines.flow.Flow
 interface Persistence {
     suspend fun getAllTasks(user: User): List<Task>
     suspend fun addTask(user: User, taskData: TaskData): Task
-    fun taskEvents(): Flow<TaskEvent>
+    fun taskEvents(user: User): Flow<TaskEvent>
     suspend fun addCompletion(task: Task, completionData: CompletionData)
     suspend fun getAllCompletions(taskId: UUID): List<Completion>
+    suspend fun addUser(userData: UserData): User?
 
 }
 

@@ -39,6 +39,7 @@ kotlin {
                 implementation(project(":entities"))
                 api("io.kotest:kotest-property:$kotestVersion")
                 api("org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion")
+                api("io.kotest:kotest-assertions-core:$kotestVersion")
             }
         }
         val commonTest by getting {

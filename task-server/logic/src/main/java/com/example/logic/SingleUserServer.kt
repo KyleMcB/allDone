@@ -33,7 +33,7 @@ class SingleUserServer(
 
     init {
         scope.launch {
-            data.taskEvents().collect { event ->
+            data.taskEvents(user).collect { event ->
                 when (event) {
                     is TaskEvent.TaskAdded -> broadcast(AddTaskResponse(event.task))
                     is TaskEvent.CompletionAdded -> broadcast((CreateCompletionResponse(event.completion)))

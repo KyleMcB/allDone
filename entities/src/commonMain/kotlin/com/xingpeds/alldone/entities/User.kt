@@ -3,13 +3,16 @@ package com.xingpeds.alldone.entities
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class User(val name: String, val id: UUID) //: UserData
-interface UserData {
+data class User(override val name: String, val id: UUID) : IUser
+interface IUser {
     val name: String
 }
 
 @Serializable
-data class NewUserRequest(override val name: String) : UserData, ClientMessage
+data class UserData(override val name: String) : IUser
+
+@Serializable
+data class NewUserRequest(val userData: UserData) : PreAuthClientMessage
 
 @Serializable
 data class NewUserResponse(val user: User) : ServerMessage

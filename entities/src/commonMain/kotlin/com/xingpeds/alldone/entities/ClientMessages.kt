@@ -6,6 +6,9 @@ import kotlinx.serialization.Serializable
 sealed interface AuthenticatedClientMessage : ClientMessage
 
 @Serializable
+sealed interface PreAuthClientMessage : ClientMessage
+
+@Serializable
 object AllTasks : AuthenticatedClientMessage
 
 @Serializable
