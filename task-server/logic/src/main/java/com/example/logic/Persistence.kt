@@ -10,6 +10,7 @@ interface Persistence {
     suspend fun addCompletion(task: Task, completionData: CompletionData)
     suspend fun getAllCompletions(taskId: UUID): List<Completion>
     suspend fun addUser(userData: UserData): User?
+    suspend fun doesUserExist(user: User): Boolean
 
 }
 

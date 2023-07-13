@@ -41,6 +41,10 @@ class MemoryNonPersistence(
         taskMap[user] = emptyList()
         return user
     }
+
+    override suspend fun doesUserExist(user: User): Boolean {
+        return this.taskMap[user]?.let { true } ?: false
+    }
 }
 
 fun createUser(id: UUID, data: UserData) = User(data.name, id)

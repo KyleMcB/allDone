@@ -8,8 +8,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
@@ -63,11 +61,16 @@ class SingleUserServer(
     }
 
 
-    fun addConnection(connection: ClientConnection) = _connections.update { it + connection }.also {
+    suspend fun addConnection(connection: ClientConnection): Unit {
+        println("addconection")
+        _connections.update { it + connection }
         scope.launch {
             mRequestsFromUser.emitAll(connection.inbound)
         }
-        connection.inbound.onEach { handleRequest(it, connection) }.launchIn(scope)
+        connection.inbound.collect {
+            println("addConnection: $it")
+            handleRequest(it, connection)
+        }
     }
 
     private suspend fun handleRequest(message: ClientMessage, connection: ClientConnection) {

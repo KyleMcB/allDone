@@ -20,3 +20,9 @@ data class AllCompletionsForTaskResponse(val taskId: UUID, val completions: List
 
 @Serializable
 object IdentifyFirst : ServerMessage
+
+@Serializable
+object IdentifySuccess : ServerMessage
+
+@Serializable
+object IdentifyFailure : ServerMessage

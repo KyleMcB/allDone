@@ -56,4 +56,17 @@ class LoginTest {
         val authenticator = Authenticator(data)
         authenticator.login(connection).shouldNotBeNull()
     }
+
+    @Test
+    fun `connection identifies as a user`() = runTest {
+        val user = userArb.next()
+        val connection = getTestClient(
+            flowOf(
+                IdentifyUser(user),
+            )
+        )
+        val data = MemoryNonPersistence()
+        val authenticator = Authenticator(data)
+        authenticator.login(connection).shouldNotBeNull()
+    }
 }

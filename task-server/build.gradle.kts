@@ -25,6 +25,7 @@ repositories {
 
 dependencies {
     implementation(project(":entities"))
+    implementation(project(":task-server:logic"))
     implementation("io.ktor:ktor-server-auth-jvm:$ktor_version")
     implementation("io.ktor:ktor-server-core-jvm:$ktor_version")
     implementation("io.ktor:ktor-server-auth-jwt-jvm:$ktor_version")

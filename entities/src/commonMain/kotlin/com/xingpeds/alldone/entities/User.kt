@@ -16,3 +16,6 @@ data class NewUserRequest(val userData: UserData) : PreAuthClientMessage
 
 @Serializable
 data class NewUserResponse(val user: User) : ServerMessage
+
+@Serializable
+data class IdentifyUser(val user: User) : PreAuthClientMessage
