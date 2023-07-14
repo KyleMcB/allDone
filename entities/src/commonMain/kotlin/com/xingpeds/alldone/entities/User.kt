@@ -12,10 +12,13 @@ interface IUser {
 data class UserData(override val name: String) : IUser
 
 @Serializable
+data class Device(val id: UUID)
+
+@Serializable
 data class NewUserRequest(val userData: UserData) : PreAuthClientMessage
 
 @Serializable
 data class NewUserResponse(val user: User) : ServerMessage
 
 @Serializable
-data class IdentifyUser(val user: User) : PreAuthClientMessage
+data class IdentifyUser(val user: User, val device: Device) : PreAuthClientMessage

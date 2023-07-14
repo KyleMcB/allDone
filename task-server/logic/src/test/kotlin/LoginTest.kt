@@ -60,9 +60,10 @@ class LoginTest {
     @Test
     fun `connection identifies as a user`() = runTest {
         val user = userArb.next()
+        val device = deviceArb.next()
         val connection = getTestClient(
             flowOf(
-                IdentifyUser(user),
+                IdentifyUser(user, device)
             )
         )
         val data = MemoryNonPersistence()

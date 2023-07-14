@@ -53,8 +53,6 @@ fun Application.configureSockets(serverContext: CoroutineContext = Dispatchers.D
             val server: SingleUserServer =
                 serverMap.getOrPut(user.id) { SingleUserServer(user, data) }
             server.addConnection(connection)
-            // I need a suspending function that prevents this from ending
-            println("end")
         }
     }
 }

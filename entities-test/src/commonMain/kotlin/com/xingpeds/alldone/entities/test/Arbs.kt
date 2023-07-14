@@ -36,6 +36,11 @@ val userArb = arbitrary {
         id = uuidArb.bind()
     )
 }
+val deviceArb = arbitrary {
+    Device(
+        id = uuidArb.bind()
+    )
+}
 
 fun completionArbFactory(taskId: UUID) = arbitrary {
     Completion(
