@@ -4,7 +4,9 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class User(override val name: String, val id: UUID) : IUser
-interface IUser {
+
+@Serializable
+sealed interface IUser {
     val name: String
 }
 
