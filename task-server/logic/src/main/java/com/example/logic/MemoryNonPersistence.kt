@@ -35,7 +35,7 @@ class MemoryNonPersistence(
         return completionMap[taskId] ?: emptyList()
     }
 
-    override suspend fun addUser(userData: UserData): User? {
+    override suspend fun addUser(userData: UserData): User {
         val userId = randUuid()
         val user = createUser(userId, userData)
         taskMap[user] = emptyList()

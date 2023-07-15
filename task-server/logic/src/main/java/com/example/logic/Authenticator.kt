@@ -8,9 +8,7 @@ import kotlinx.coroutines.flow.cancellable
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
 
-class Authenticator(val data: Persistence) {
-
-}
+class Authenticator(val data: Persistence)
 
 //this function has more than one responsibility, it should be split up
 suspend fun Authenticator.login(
