@@ -6,6 +6,8 @@ include(":desktopApp")
 include(":entities")
 include(":entities-test")
 include(":task-server")
+include(":task-server:logic")
+include(":shared:logic")
 
 pluginManagement {
     repositories {
@@ -41,4 +43,3 @@ dependencyResolutionManagement {
         maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
     }
 }
-include(":task-server:logic")
