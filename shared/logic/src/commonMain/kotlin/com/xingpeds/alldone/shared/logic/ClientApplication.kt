@@ -2,8 +2,10 @@ package com.xingpeds.alldone.shared.logic
 
 import com.xingpeds.alldone.entities.*
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,6 +15,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.newFixedThreadPoolContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -34,6 +37,11 @@ interface ServerConnection {
     val incoming: Flow<ServerMessage>
 }
 
+val defaultExceptionHandler = CoroutineExceptionHandler { context, exception ->
+    println("context: $context")
+    println("exception: $exception")
+}
+
 
 const val stateKey = "stateKey"
 const val deviceKey = "deviceKey"
@@ -41,21 +49,123 @@ const val deviceKey = "deviceKey"
 class ClientApplication(
     val settings: PersistedSettings,
     val connectionToServer: ConnectionToServerFun,
-    val navigator: Navigator,
+    val userInput: UserInputManager,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
-    val appScope: CoroutineScope = CoroutineScope(dispatcher),
+    val exceptionHandler: CoroutineExceptionHandler = defaultExceptionHandler,
+    val appScope: CoroutineScope = CoroutineScope(dispatcher + exceptionHandler),
+    autoStart: Boolean = true,
 ) {
+    init {
+        if (autoStart) {
+            start()
+        }
+    }
+
     private val device = MutableStateFlow<Device?>(null)
     private val clientStateFlow = MutableStateFlow<ClientState>(ClientState.Loading)
+    private val serverConnection = MutableStateFlow<ServerConnection?>(null)
     val stateFlow: StateFlow<ClientState> = clientStateFlow
+    val cheatScope = CoroutineScope(newFixedThreadPoolContext(10, "cheatScope"))
 
-    fun start(): Job = appScope.launch {
+    internal fun start(): Job = appScope.launch {
         val stateString = settings.get(stateKey)
-        clientStateFlow.emit(stateString?.toClientState() ?: ClientState.TabulaRasa)
         val deviceString = settings.get(deviceKey)
+        clientStateFlow.emit(stateString?.toClientState() ?: ClientState.TabulaRasa)
         device.emit(deviceString?.toDeviceOrCreateNew() ?: Device(randUuid()))
-        clientStateFlow.onEach(::saveState).launchIn(appScope)
+        serverConnection.onEach { println("serverConnection: $it") }.launchIn(appScope)
         device.onEach(::saveDevice).launchIn(appScope)
+        clientStateFlow
+            .onEach { println("first printer $it") }.launchIn(appScope)
+        clientStateFlow
+            .onEach { println("second printer $it") }
+            .onEach(::saveState)
+            .onEach(::handleClientState)
+            .launchIn(appScope)
+        clientStateFlow
+            .onEach { println("third printer client state is $it") }
+            .launchIn(appScope)
+    }
+
+    suspend fun getServerConnection(): ServerConnection {
+        return serverConnection.filterNotNull().first()
+    }
+
+    @OptIn(FlowPreview::class)
+    private suspend fun handleClientState(clientState: ClientState) {
+        when (clientState) {
+            ClientState.Loading -> Unit
+            ClientState.TabulaRasa -> {
+                val userDetailsAndServerUrl = userInput.getUserDetailsAndServerUrl()
+                clientStateFlow.emit(
+                    ClientState.AttemptingToRegister(
+                        userDetailsAndServerUrl,
+                        0
+                    )
+                )
+            }
+
+            is ClientState.AttemptingToRegister -> registerUser(clientState.userDetailsAndServerUrl)
+            is ClientState.Paired -> {
+                println("state is paired")
+                val connection =
+                    serverConnection.first()
+                if (connection == null) {
+                    // we are starting up in a paired state and need to connect
+                    println("we need to connect")
+                    connectionAndIdentify(clientState)
+                } else {
+                    // already have a connection
+                    println("we already have a connection")
+                    Unit
+                }
+            }
+        }
+    }
+
+    private suspend fun connectionAndIdentify(clientState: ClientState.Paired) {
+        val (_, serverUrl) = clientState
+        val connectionScope = CoroutineScope(dispatcher + defaultExceptionHandler)
+        when (val attempt = connectionToServer(serverUrl, connectionScope)) {
+            AttemptedServerConnection.Failure.ConnectionRefused -> TODO()
+            is AttemptedServerConnection.Success -> {
+                val connection = attempt.connection
+                connection.incoming.onEach {
+                    when (it) {
+                        is IdentifySuccess -> {
+                            serverConnection.emit(connection)
+                        }
+
+                        else -> Unit
+                    }
+                }.launchIn(connectionScope)
+                connection.send(IdentifyUser(clientState.user, getDevice()))
+            }
+        }
+    }
+
+    //this function does a little too much, but it's fine for now
+    private suspend fun registerUser(userDetailsAndServerUrl: NewUserAndServer) {
+        val (userDetails, serverUrl) = userDetailsAndServerUrl
+        val device = device.filterNotNull().first()
+        val connectionScope = CoroutineScope(dispatcher)
+        when (val attempt = connectionToServer(serverUrl, connectionScope)) {
+            is AttemptedServerConnection.Success -> {
+                val connection = attempt.connection
+                connection.incoming.onEach {
+                    when (it) {
+                        is NewUserResponse -> {
+                            serverConnection.emit(connection)
+                            clientStateFlow.emit(ClientState.Paired(it.user, serverUrl))
+                        }
+
+                        else -> Unit
+                    }
+                }.launchIn(connectionScope)
+                connection.send(NewUserRequest(userDetails, device))
+            }
+
+            is AttemptedServerConnection.Failure -> Unit
+        }
     }
 
     private suspend fun saveState(clientState: ClientState) {
@@ -80,6 +190,15 @@ sealed class ClientState {
 
     @Serializable
     object TabulaRasa : ClientState()
+
+    @Serializable
+    data class AttemptingToRegister(
+        val userDetailsAndServerUrl: NewUserAndServer,
+        val attempt: Int,
+    ) : ClientState()
+
+    @Serializable
+    data class Paired(val user: User, val serverUrl: Url) : ClientState()
 }
 
 internal fun String.toClientState(): ClientState {
