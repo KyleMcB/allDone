@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.newFixedThreadPoolContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -65,7 +64,6 @@ class ClientApplication(
     private val clientStateFlow = MutableStateFlow<ClientState>(ClientState.Loading)
     private val serverConnection = MutableStateFlow<ServerConnection?>(null)
     val stateFlow: StateFlow<ClientState> = clientStateFlow
-    val cheatScope = CoroutineScope(newFixedThreadPoolContext(10, "cheatScope"))
 
     internal fun start(): Job = appScope.launch {
         val stateString = settings.get(stateKey)
@@ -75,15 +73,11 @@ class ClientApplication(
         serverConnection.onEach { println("serverConnection: $it") }.launchIn(appScope)
         device.onEach(::saveDevice).launchIn(appScope)
         clientStateFlow
-            .onEach { println("first printer $it") }.launchIn(appScope)
-        clientStateFlow
             .onEach { println("second printer $it") }
             .onEach(::saveState)
             .onEach(::handleClientState)
             .launchIn(appScope)
-        clientStateFlow
-            .onEach { println("third printer client state is $it") }
-            .launchIn(appScope)
+
     }
 
     suspend fun getServerConnection(): ServerConnection {
