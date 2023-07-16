@@ -30,7 +30,8 @@ class ApplicationTest {
         }
         client.webSocket("/ws") {
             println("connected")
-            val request: ClientMessage = NewUserRequest(UserData("testuser"))
+            val request: ClientMessage =
+                NewUserRequest(UserData("testuser"), device = Device(randUuid()))
             println("sending")
             sendSerialized(request)
             println("receiving")

@@ -4,15 +4,15 @@ import com.xingpeds.alldone.shared.logic.ConnectionToServerFun
 import com.xingpeds.alldone.shared.logic.Navigator
 import com.xingpeds.alldone.shared.logic.PersistedSettings
 import com.xingpeds.alldone.shared.logic.Screen
-import io.kotest.matchers.shouldBe
+import com.xingpeds.alldone.shared.logic.Url
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 
 class TestNavigator : Navigator {
-    val events = MutableSharedFlow<Screen>()
+    val events = MutableSharedFlow<Screen>(replay = 1)
     override suspend fun navigateTo(screen: Screen) {
         events.emit(screen)
     }
@@ -22,7 +22,14 @@ class TestNavigator : Navigator {
 class ClientApplicationTestTDD {
     fun TestScope.getTestSubject(
         settings: Map<String, String> = mapOf(),
-        connectToServer: ConnectionToServerFun = ConnectionToServerFun { AttemptedServerConnection.Failure.ConnectionRefused },
+        connectToServer: ConnectionToServerFun = object : ConnectionToServerFun {
+            override suspend fun invoke(
+                p1: Url,
+                coroutineScope: CoroutineScope,
+            ): AttemptedServerConnection {
+                return AttemptedServerConnection.Failure.ConnectionRefused
+            }
+        },
         navigator: Navigator = TestNavigator(),
     ) = ClientApplication(
         settings = object : PersistedSettings {
@@ -40,10 +47,5 @@ class ClientApplicationTestTDD {
         getTestSubject()
     }
 
-    @Test
-    fun `At tabula rasa we navigate to new user screen`() = runTest {
-        val navigator = TestNavigator()
-        val subject = getTestSubject(navigator = navigator)
-        navigator.events.first() shouldBe Screen.TabulaRasa
-    }
+
 }

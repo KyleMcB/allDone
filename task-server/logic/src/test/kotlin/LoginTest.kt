@@ -49,7 +49,7 @@ class LoginTest {
     fun `connection requests new user`() = runTest {
         val connection = getTestClient(
             flowOf(
-                NewUserRequest(UserData("test")),
+                NewUserRequest(UserData("test"), deviceArb.next()),
             )
         )
         val data = MemoryNonPersistence()

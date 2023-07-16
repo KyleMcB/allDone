@@ -17,7 +17,7 @@ data class UserData(override val name: String) : IUser
 data class Device(val id: UUID)
 
 @Serializable
-data class NewUserRequest(val userData: UserData) : PreAuthClientMessage
+data class NewUserRequest(val userData: UserData, val device: Device) : PreAuthClientMessage
 
 @Serializable
 data class NewUserResponse(val user: User) : ServerMessage
