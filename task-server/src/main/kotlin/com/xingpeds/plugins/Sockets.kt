@@ -1,12 +1,12 @@
 package com.xingpeds.plugins
 
-import com.example.logic.Authenticator
-import com.example.logic.ClientConnection
-import com.example.logic.MemoryNonPersistence
-import com.example.logic.Persistence
-import com.example.logic.SingleUserServer
-import com.example.logic.login
 import com.xingpeds.alldone.entities.*
+import com.xingpeds.taskserver.logic.Authenticator
+import com.xingpeds.taskserver.logic.ClientConnection
+import com.xingpeds.taskserver.logic.MemoryNonPersistence
+import com.xingpeds.taskserver.logic.Persistence
+import com.xingpeds.taskserver.logic.SingleUserServer
+import com.xingpeds.taskserver.logic.login
 import io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter
 import io.ktor.server.application.Application
 import io.ktor.server.application.install

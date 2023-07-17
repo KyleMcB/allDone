@@ -1,4 +1,4 @@
-package com.example.logic
+package com.xingpeds.taskserver.logic
 
 import com.xingpeds.alldone.entities.*
 import kotlinx.coroutines.CoroutineScope

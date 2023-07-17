@@ -1,6 +1,6 @@
-import com.example.logic.ClientConnection
 import com.xingpeds.alldone.entities.*
 import com.xingpeds.alldone.entities.test.*
+import com.xingpeds.taskserver.logic.ClientConnection
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.arbitrary
 import kotlinx.coroutines.flow.Flow

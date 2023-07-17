@@ -1,5 +1,5 @@
-import com.example.logic.ClientConnection
 import com.xingpeds.alldone.entities.*
+import com.xingpeds.taskserver.logic.ClientConnection
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,7 +11,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 
 class TestClientConnection private constructor(
-    scope: CoroutineScope, messages: Flow<ClientMessage>
+    scope: CoroutineScope, messages: Flow<ClientMessage>,
 ) : ClientConnection {
     private val _outbound = MutableStateFlow<List<ServerMessage>>(emptyList())
     val outbound = _outbound.asStateFlow()

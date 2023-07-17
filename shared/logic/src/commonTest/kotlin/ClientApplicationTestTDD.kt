@@ -27,7 +27,6 @@ import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.encodeToString
@@ -66,21 +65,9 @@ class TestUserInputManager(val userAndUrlFromUser: NewUserAndServer? = null) : U
 
 interface TestEnvironment {
     val testScope: CoroutineScope
-    fun launch(block: suspend CoroutineScope.() -> Unit) =
-        testScope.launch(block = block, context = testScope.coroutineContext)
 }
 
 data class TestInvironmentData(override val testScope: CoroutineScope) : TestEnvironment
-
-val testExceptionHandler: CoroutineExceptionHandler =
-    CoroutineExceptionHandler { context, exception ->
-        println(
-            """
-            context: $context
-            exception: $exception
-        """.trimIndent()
-        )
-    }
 
 fun runTestMultithread(block: suspend TestEnvironment.() -> Unit) = runBlocking {
 
@@ -119,7 +106,7 @@ class ClientApplicationTestTDD {
     ) = ClientApplication(
         settings = TestSettings(settings),
         connectionToServer = connectToServer,
-        appScope = this@getTestSubject.testScope,
+        appScope = testScope,
         userInput = userInputManager,
         autoStart = false
     )
@@ -213,7 +200,6 @@ class ClientApplicationTestTDD {
 
     @Test
     fun `when starting in paired state app identifies`() = runTestMultithread {
-        println("omg")
         val url = Url("http://localhost:8080")
         val user = userArb.next()
         val testState = MutableStateFlow(false)

@@ -1,9 +1,9 @@
 import TestClientConnection.Companion.getTestClient
-import com.example.logic.Authenticator
-import com.example.logic.MemoryNonPersistence
-import com.example.logic.login
 import com.xingpeds.alldone.entities.*
 import com.xingpeds.alldone.entities.test.*
+import com.xingpeds.taskserver.logic.Authenticator
+import com.xingpeds.taskserver.logic.MemoryNonPersistence
+import com.xingpeds.taskserver.logic.login
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.property.arbitrary.next

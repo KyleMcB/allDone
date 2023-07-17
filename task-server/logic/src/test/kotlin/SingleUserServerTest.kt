@@ -1,9 +1,9 @@
 import TestClientConnection.Companion.getTestClient
-import com.example.logic.MemoryNonPersistence
-import com.example.logic.Persistence
-import com.example.logic.SingleUserServer
 import com.xingpeds.alldone.entities.*
 import com.xingpeds.alldone.entities.test.*
+import com.xingpeds.taskserver.logic.MemoryNonPersistence
+import com.xingpeds.taskserver.logic.Persistence
+import com.xingpeds.taskserver.logic.SingleUserServer
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.list
 import io.kotest.property.arbitrary.next
