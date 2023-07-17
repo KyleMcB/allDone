@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -36,6 +37,7 @@ interface ServerConnection {
     val serverAddress: Url
     suspend fun send(message: ClientMessage)
     val incoming: Flow<ServerMessage>
+    val connectionScope: CoroutineScope
 }
 
 val defaultExceptionHandler = CoroutineExceptionHandler { context, exception ->
@@ -51,6 +53,7 @@ class ClientApplication(
     val settings: PersistedSettings,
     val connectionToServer: ConnectionToServerFun,
     val userInput: UserInputManager,
+    val clientData: ClientData,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
     val exceptionHandler: CoroutineExceptionHandler = defaultExceptionHandler,
     val appScope: CoroutineScope = CoroutineScope(dispatcher + exceptionHandler),
@@ -72,14 +75,45 @@ class ClientApplication(
         val deviceString = settings.get(deviceKey)
         clientStateFlow.emit(stateString?.toClientState() ?: ClientState.TabulaRasa)
         device.emit(deviceString?.toDeviceOrCreateNew() ?: Device(randUuid()))
-        serverConnection.onEach { println("serverConnection: $it") }.launchIn(appScope)
+        serverConnection
+            .onEach { println("serverConnection: $it") }
+            .filterNotNull()
+            .onEach {
+                it.incoming.onEach(::handleServerMessage).launchIn(it.connectionScope)
+            }
+            .launchIn(appScope)
         device.onEach(::saveDevice).launchIn(appScope)
         clientStateFlow
-            .onEach { println("second printer $it") }
+            .onEach { println("client state: $it") }
             .onEach(::saveState)
             .onEach(::handleClientState)
             .launchIn(appScope)
 
+    }
+
+    suspend fun updateServerConnection(serverConnection: ServerConnection) {
+        this.serverConnection.update {
+            it?.connectionScope?.cancel()
+            serverConnection
+        }
+    }
+
+    suspend fun handleServerMessage(message: ServerMessage) {
+        when (message) {
+            is AddTaskResponse -> clientData.addTask(message.task)
+            is AllCompletionsForTaskResponse -> clientData.resetCompletionsForTask(
+                message.taskId,
+                message.completions
+            )
+
+            is AllTasksResponse -> clientData.resetTasks(message.tasks)
+            is CreateCompletionResponse -> clientData.addCompletion(message.completion)
+            InvalidRequest -> TODO()
+            IdentifyFailure -> Unit
+            IdentifyFirst -> Unit
+            IdentifySuccess -> Unit
+            is NewUserResponse -> Unit
+        }
     }
 
     suspend fun getServerConnection(): ServerConnection {
@@ -126,7 +160,7 @@ class ClientApplication(
                     connection.incoming.cancellable().collect {
                         when (it) {
                             is IdentifySuccess -> {
-                                serverConnection.emit(connection)
+                                updateServerConnection(connection)
                                 cancel()
                             }
 
@@ -143,7 +177,7 @@ class ClientApplication(
     private suspend fun registerUser(userDetailsAndServerUrl: NewUserAndServer) {
         val (userDetails, serverUrl) = userDetailsAndServerUrl
         val device = device.filterNotNull().first()
-        val connectionScope = CoroutineScope(dispatcher)
+        val connectionScope = CoroutineScope(dispatcher + exceptionHandler)
         when (val attempt = connectionToServer(serverUrl, connectionScope)) {
             is AttemptedServerConnection.Success -> {
                 val connection = attempt.connection
@@ -151,9 +185,8 @@ class ClientApplication(
                     connection.incoming.cancellable().collect {
                         when (it) {
                             is NewUserResponse -> {
-                                serverConnection.emit(connection)
+                                updateServerConnection(connection)
                                 clientStateFlow.emit(ClientState.Paired(it.user, serverUrl))
-                                cancel()
                             }
 
                             else -> Unit

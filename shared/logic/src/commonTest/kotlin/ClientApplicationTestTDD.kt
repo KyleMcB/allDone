@@ -2,6 +2,7 @@ import com.xingpeds.alldone.entities.*
 import com.xingpeds.alldone.entities.test.*
 import com.xingpeds.alldone.shared.logic.AttemptedServerConnection
 import com.xingpeds.alldone.shared.logic.ClientApplication
+import com.xingpeds.alldone.shared.logic.ClientData
 import com.xingpeds.alldone.shared.logic.ClientState
 import com.xingpeds.alldone.shared.logic.ConnectionToServerFun
 import com.xingpeds.alldone.shared.logic.GetUserDetailsAndServerUrlFun
@@ -65,30 +66,60 @@ class TestUserInputManager(val userAndUrlFromUser: NewUserAndServer? = null) : U
 
 interface TestEnvironment {
     val testScope: CoroutineScope
+    val execScope: CoroutineScope
+    val handler: CoroutineExceptionHandler
+
 }
 
-data class TestInvironmentData(override val testScope: CoroutineScope) : TestEnvironment
+data class TestInvironmentData(
+    override val testScope: CoroutineScope,
+    override val execScope: CoroutineScope,
+    override val handler: CoroutineExceptionHandler,
+) : TestEnvironment
 
 fun runTestMultithread(block: suspend TestEnvironment.() -> Unit) = runBlocking {
 
     val execScope = this
-
-    val testJob = Job()
-    val context = Dispatchers.Default + testJob + CoroutineExceptionHandler { context, exception ->
+    val execeptionHandler = CoroutineExceptionHandler { context, exception ->
         println(
             """
-            context: $context
-            exception: $exception
-        """.trimIndent()
+                context: $context
+                exception: $exception
+            """.trimIndent()
         )
         execScope.cancel("test failed", exception)
     }
-    val env = TestInvironmentData(CoroutineScope(context))
+
+    val testJob = Job()
+    val context = Dispatchers.Default + testJob + execeptionHandler
+    val env = TestInvironmentData(CoroutineScope(context), execScope, execeptionHandler)
 
     withTimeout(10.seconds) {
         env.block()
     }
     testJob.cancelAndJoin()
+}
+
+class TestData(
+    val onAddTask: (Task) -> Unit = {},
+    val onResetCompletionsForTask: (UUID, List<Completion>) -> Unit = { _, _ -> },
+) : ClientData {
+    override suspend fun addTask(task: Task) {
+        println("task saved: $task")
+        onAddTask(task)
+    }
+
+    override suspend fun resetCompletionsForTask(taskId: UUID, completions: List<Completion>) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun resetTasks(tasks: List<Task>) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun addCompletion(completion: Completion) {
+        TODO("Not yet implemented")
+    }
 }
 
 class ClientApplicationTestTDD {
@@ -103,12 +134,15 @@ class ClientApplicationTestTDD {
                 return AttemptedServerConnection.Failure.ConnectionRefused
             }
         },
+        clientData: ClientData = TestData(),
     ) = ClientApplication(
         settings = TestSettings(settings),
         connectionToServer = connectToServer,
         appScope = testScope,
         userInput = userInputManager,
-        autoStart = false
+        autoStart = false,
+        exceptionHandler = this.handler,
+        clientData = clientData,
     )
 
     @Test
@@ -182,17 +216,14 @@ class ClientApplicationTestTDD {
 
                             override val incoming: Flow<ServerMessage>
                                 get() = flowOf(NewUserResponse(userArb.next()))
+                            override val connectionScope: CoroutineScope
+                                get() = p2
                         }
                     )
                 }
             }
-            val subject = ClientApplication(
-                settings = TestSettings(),
-                connectionToServer = connectFun,
-                appScope = testScope,
-                userInput = input,
-                autoStart = false
-            )
+            val subject = getTestSubject(connectToServer = connectFun, userInputManager = input)
+
             subject.start().join()
             subject.stateFlow.filterNotNull().filterIsInstance<ClientState.Paired>().first()
             // if this test completes it is successful
@@ -223,6 +254,8 @@ class ClientApplicationTestTDD {
 
                         override val incoming: Flow<ServerMessage>
                             get() = flowOf(IdentifySuccess)
+                        override val connectionScope: CoroutineScope
+                            get() = p2
                     }
                 )
             }
@@ -232,6 +265,20 @@ class ClientApplicationTestTDD {
         subject.stateFlow.filterNotNull().filterIsInstance<ClientState.Paired>().first()
         testState.filter { it }.first()
         // if this test completes it is successful
+    }
+
+    @Test
+    fun `app saves all incoming tasks`() = runTestMultithread {
+        val task = taskArb.next()
+        val testFinished = MutableStateFlow(false)
+        val clientData = TestData(onAddTask = {
+            it shouldBe task
+            testFinished.value = true
+        })
+        val subject = getTestSubject(clientData = clientData)
+        val serverMessage = AddTaskResponse(task)
+        subject.handleServerMessage(serverMessage)
+        testFinished.filter { it }.first()
     }
 
 }
