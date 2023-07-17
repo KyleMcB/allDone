@@ -7,9 +7,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.cancellable
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
@@ -100,16 +102,13 @@ class ClientApplication(
 
             is ClientState.AttemptingToRegister -> registerUser(clientState.userDetailsAndServerUrl)
             is ClientState.Paired -> {
-                println("state is paired")
                 val connection =
                     serverConnection.first()
                 if (connection == null) {
                     // we are starting up in a paired state and need to connect
-                    println("we need to connect")
                     connectionAndIdentify(clientState)
                 } else {
                     // already have a connection
-                    println("we already have a connection")
                     Unit
                 }
             }
@@ -123,15 +122,18 @@ class ClientApplication(
             AttemptedServerConnection.Failure.ConnectionRefused -> TODO()
             is AttemptedServerConnection.Success -> {
                 val connection = attempt.connection
-                connection.incoming.onEach {
-                    when (it) {
-                        is IdentifySuccess -> {
-                            serverConnection.emit(connection)
-                        }
+                connectionScope.launch {
+                    connection.incoming.cancellable().collect {
+                        when (it) {
+                            is IdentifySuccess -> {
+                                serverConnection.emit(connection)
+                                cancel()
+                            }
 
-                        else -> Unit
+                            else -> Unit
+                        }
                     }
-                }.launchIn(connectionScope)
+                }
                 connection.send(IdentifyUser(clientState.user, getDevice()))
             }
         }
@@ -145,16 +147,19 @@ class ClientApplication(
         when (val attempt = connectionToServer(serverUrl, connectionScope)) {
             is AttemptedServerConnection.Success -> {
                 val connection = attempt.connection
-                connection.incoming.onEach {
-                    when (it) {
-                        is NewUserResponse -> {
-                            serverConnection.emit(connection)
-                            clientStateFlow.emit(ClientState.Paired(it.user, serverUrl))
-                        }
+                connectionScope.launch {
+                    connection.incoming.cancellable().collect {
+                        when (it) {
+                            is NewUserResponse -> {
+                                serverConnection.emit(connection)
+                                clientStateFlow.emit(ClientState.Paired(it.user, serverUrl))
+                                cancel()
+                            }
 
-                        else -> Unit
+                            else -> Unit
+                        }
                     }
-                }.launchIn(connectionScope)
+                }
                 connection.send(NewUserRequest(userDetails, device))
             }
 
