@@ -6,20 +6,15 @@ import com.xingpeds.alldone.shared.logic.ClientData
 import com.xingpeds.alldone.shared.logic.ClientState
 import com.xingpeds.alldone.shared.logic.ConnectionToServerFun
 import com.xingpeds.alldone.shared.logic.GetUserDetailsAndServerUrlFun
+import com.xingpeds.alldone.shared.logic.MemoryNonPersistentSettings
 import com.xingpeds.alldone.shared.logic.NewUserAndServer
-import com.xingpeds.alldone.shared.logic.PersistedSettings
 import com.xingpeds.alldone.shared.logic.ServerConnection
 import com.xingpeds.alldone.shared.logic.Url
 import com.xingpeds.alldone.shared.logic.UserInputManager
 import com.xingpeds.alldone.shared.logic.stateKey
 import io.kotest.matchers.shouldBe
 import io.kotest.property.arbitrary.next
-import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,24 +23,10 @@ import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
-import kotlin.time.Duration.Companion.seconds
 
-
-class TestSettings(settings: Map<String, String> = mapOf()) : PersistedSettings {
-    private val map = settings.toMutableMap()
-    override suspend fun get(key: String): String? = map[key].also {
-        println("loaded $key = $it")
-    }
-
-    override suspend fun set(key: String, value: String) = map.set(key, value).also {
-        println("saved $key to $value")
-    }
-}
 
 class TestUserInputManager(val userAndUrlFromUser: NewUserAndServer? = null) : UserInputManager {
     override val getUserDetailsAndServerUrl: GetUserDetailsAndServerUrlFun
@@ -63,42 +44,6 @@ class TestUserInputManager(val userAndUrlFromUser: NewUserAndServer? = null) : U
         }
 }
 
-
-interface TestEnvironment {
-    val testScope: CoroutineScope
-    val execScope: CoroutineScope
-    val handler: CoroutineExceptionHandler
-
-}
-
-data class TestInvironmentData(
-    override val testScope: CoroutineScope,
-    override val execScope: CoroutineScope,
-    override val handler: CoroutineExceptionHandler,
-) : TestEnvironment
-
-fun runTestMultithread(block: suspend TestEnvironment.() -> Unit) = runBlocking {
-
-    val execScope = this
-    val execeptionHandler = CoroutineExceptionHandler { context, exception ->
-        println(
-            """
-                context: $context
-                exception: $exception
-            """.trimIndent()
-        )
-        execScope.cancel("test failed", exception)
-    }
-
-    val testJob = Job()
-    val context = Dispatchers.Default + testJob + execeptionHandler
-    val env = TestInvironmentData(CoroutineScope(context), execScope, execeptionHandler)
-
-    withTimeout(10.seconds) {
-        env.block()
-    }
-    testJob.cancelAndJoin()
-}
 
 class TestData(
     val onAddTask: (Task) -> Unit = {},
@@ -136,7 +81,7 @@ class ClientApplicationTestTDD {
         },
         clientData: ClientData = TestData(),
     ) = ClientApplication(
-        settings = TestSettings(settings),
+        settings = MemoryNonPersistentSettings(settings),
         connectionToServer = connectToServer,
         appScope = testScope,
         userInput = userInputManager,
@@ -146,13 +91,13 @@ class ClientApplicationTestTDD {
     )
 
     @Test
-    fun construct() = runTestMultithread {
+    fun construct() = runTestMultiThread {
         getTestSubject()
         // if this test completes it is successful
     }
 
     @Test
-    fun `device key is available after start`() = runTestMultithread {
+    fun `device key is available after start`() = runTestMultiThread {
 
         val subject = getTestSubject()
         subject.start().join()
@@ -161,14 +106,14 @@ class ClientApplicationTestTDD {
     }
 
     @Test
-    fun `app with no saved configuration starts in tabularasa state`() = runTestMultithread {
+    fun `app with no saved configuration starts in tabularasa state`() = runTestMultiThread {
         val subject = getTestSubject()
         subject.start().join()
         subject.stateFlow.filterNotNull().first() shouldBe ClientState.TabulaRasa
     }
 
     @Test
-    fun `after user has supplied app with data it tries to register`() = runTestMultithread {
+    fun `after user has supplied app with data it tries to register`() = runTestMultiThread {
         val url = Url("http://localhost:8080")
         val input = TestUserInputManager(
             userAndUrlFromUser = NewUserAndServer(
@@ -189,7 +134,7 @@ class ClientApplicationTestTDD {
 
     @Test
     fun `when the server responds with success the app moves into paired state`() =
-        runTestMultithread {
+        runTestMultiThread {
             val url = Url("http://localhost:8080")
             val userData = UserData("user")
             val input = TestUserInputManager(
@@ -230,7 +175,7 @@ class ClientApplicationTestTDD {
         }
 
     @Test
-    fun `when starting in paired state app identifies`() = runTestMultithread {
+    fun `when starting in paired state app identifies`() = runTestMultiThread {
         val url = Url("http://localhost:8080")
         val user = userArb.next()
         val testState = MutableStateFlow(false)
@@ -268,7 +213,7 @@ class ClientApplicationTestTDD {
     }
 
     @Test
-    fun `app saves all incoming tasks`() = runTestMultithread {
+    fun `app saves all incoming tasks`() = runTestMultiThread {
         val task = taskArb.next()
         val testFinished = MutableStateFlow(false)
         val clientData = TestData(onAddTask = {

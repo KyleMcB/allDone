@@ -8,6 +8,8 @@ include(":entities-test")
 include(":task-server")
 include(":task-server:logic")
 include(":shared:logic")
+include(":shared:logic-test")
+
 
 pluginManagement {
     repositories {
