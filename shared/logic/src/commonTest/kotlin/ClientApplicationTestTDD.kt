@@ -5,7 +5,6 @@ import com.xingpeds.alldone.shared.logic.ClientApplication
 import com.xingpeds.alldone.shared.logic.ClientData
 import com.xingpeds.alldone.shared.logic.ClientState
 import com.xingpeds.alldone.shared.logic.ConnectionToServerFun
-import com.xingpeds.alldone.shared.logic.GetUserDetailsAndServerUrlFun
 import com.xingpeds.alldone.shared.logic.MemoryNonPersistentSettings
 import com.xingpeds.alldone.shared.logic.NewUserAndServer
 import com.xingpeds.alldone.shared.logic.ServerConnection
@@ -29,19 +28,17 @@ import kotlin.test.Test
 
 
 class TestUserInputManager(val userAndUrlFromUser: NewUserAndServer? = null) : UserInputManager {
-    override val getUserDetailsAndServerUrl: GetUserDetailsAndServerUrlFun
-        get() = object : GetUserDetailsAndServerUrlFun {
-            override suspend fun invoke(): NewUserAndServer {
-                if (userAndUrlFromUser == null) {
-                    // wait forever
-                    while (true) {
-                        delay(1000)
-                    }
-                } else {
-                    return userAndUrlFromUser
-                }
+
+    override suspend fun getUserDetailsAndServerUrl(): NewUserAndServer {
+        if (userAndUrlFromUser == null) {
+            // wait forever
+            while (true) {
+                delay(1000)
             }
+        } else {
+            return userAndUrlFromUser
         }
+    }
 }
 
 
