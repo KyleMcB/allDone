@@ -91,14 +91,14 @@ class ClientApplication(
 
     }
 
-    suspend fun updateServerConnection(serverConnection: ServerConnection) {
+    internal suspend fun updateServerConnection(serverConnection: ServerConnection) {
         this.serverConnection.update {
             it?.connectionScope?.cancel()
             serverConnection
         }
     }
 
-    suspend fun handleServerMessage(message: ServerMessage) {
+    internal suspend fun handleServerMessage(message: ServerMessage) {
         when (message) {
             is AddTaskResponse -> clientData.addTask(message.task)
             is AllCompletionsForTaskResponse -> clientData.resetCompletionsForTask(
